@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Bundle": {
+      "title": "Diamond Bundle",
+      "description": "Available top-up options",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "diamonds": { "type": "integer" },
+        "price": { "type": "number" },
+        "currency": { "type": "string" },
+        "category": { "type": "string", "enum": ["diamonds", "weekly", "monthly"] },
+        "image": { "type": "string" }
+      },
+      "required": ["id", "name", "diamonds", "price", "currency", "category"]
+    },
+    "Order": {
+      "title": "Top-up Order",
+      "description": "Diamond top-up order details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "playerId": { "type": "string" },
+        "bundleId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "cancelled"] },
+        "paymentMethod": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "playerId", "bundleId", "amount", "status", "paymentMethod", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/bundles/{bundleId}": {
+      "schema": "Bundle",
+      "description": "Top-up bundle documents"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Order records"
+    }
+  }
+}

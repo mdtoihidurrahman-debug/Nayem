@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Admin check: Only if the user document says they are an admin
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+             request.auth.token.email == 'mdtoihidurrahman@gmail.com'; // Bootstrap admin
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId && 
+                    incoming().role == 'user' && 
+                    incoming().keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+                    incoming().keys().size() == 4;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) &&
+                    // Users can only change their displayName (if I added it) or nothing
+                    (incoming().diff(existing()).affectedKeys().hasOnly(['displayName']));
+      allow delete: if isAdmin();
+    }
+
+    // --- Bundles ---
+    match /bundles/{bundleId} {
+      allow read: if true; // Publicly viewable
+      allow write: if isAdmin();
+    }
+
+    // --- Orders ---
+    match /orders/{orderId} {
+      function isValidOrder(data) {
+        return data.userId == request.auth.uid &&
+               data.playerId is string && data.playerId.size() > 0 && data.playerId.size() <= 64 &&
+               data.bundleId is string &&
+               data.amount is number && data.amount >= 0 &&
+               data.status in ['pending', 'processing', 'completed', 'cancelled'] &&
+               data.paymentMethod is string &&
+               data.createdAt == request.time;
+      }
+
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isEmailVerified() && isValidOrder(incoming()) && 
+                    incoming().status == 'pending' &&
+                    exists(/databases/$(database)/documents/bundles/$(incoming().bundleId));
+      
+      allow update: if isAdmin() && (
+        // Admin action: Change status
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        incoming().updatedAt == request.time
+      );
+      
+      allow delete: if false; // Orders are permanent audit logs
+    }
+  }
+}

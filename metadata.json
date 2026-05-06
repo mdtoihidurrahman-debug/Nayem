@@ -1,0 +1,6 @@
+{
+  "name": "FireTop - Free Fire Diamond Top-up",
+  "description": "A professional and secure diamond top-up platform for Free Fire players with real-time tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Firebase Authentication", "Google Login", "Firestore Database", "Real-time Notifications"]
+}
